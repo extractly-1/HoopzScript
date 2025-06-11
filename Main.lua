@@ -1,27 +1,29 @@
+-- Ensure the game is loaded
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 local UIS = game:GetService("UserInputService")
-local RS = game:GetService("RunService")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local mouse = player:GetMouse()
-
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HoopzScriptGUI"
 ScreenGui.ResetOnSpawn = false
+
 if gethui then
     ScreenGui.Parent = gethui()
 elseif syn and syn.protect_gui then
     syn.protect_gui(ScreenGui)
     ScreenGui.Parent = game.CoreGui
 else
-    pcall(function() ScreenGui.Parent = game:WaitForChild("CoreGui") end)
+    pcall(function()
+        ScreenGui.Parent = game:WaitForChild("CoreGui")
+    end)
 end
 
 local themeColor = Color3.fromRGB(0, 170, 255)
 local buttonHeight = 36
 local spacing = 8
 
+-- Main Frame
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 340, 0, 380)
 mainFrame.Position = UDim2.new(0.35, 0, 0.25, 0)
@@ -32,6 +34,7 @@ mainFrame.Draggable = true
 mainFrame.Parent = ScreenGui
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 10)
 
+-- Title
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 40)
 title.BackgroundTransparency = 1
@@ -41,8 +44,10 @@ title.Font = Enum.Font.GothamBold
 title.TextSize = 22
 title.Parent = mainFrame
 
+-- Tabs
 local tabNames = {"Aimbot", "Visuals", "Misc", "Settings"}
-local tabButtons, tabContents = {}, {}
+local tabButtons = {}
+local tabContents = {}
 
 local tabFrame = Instance.new("Frame")
 tabFrame.Size = UDim2.new(1, 0, 0, 40)
@@ -64,6 +69,7 @@ for i, name in ipairs(tabNames) do
 	tabButtons[name] = tabBtn
 end
 
+-- Create Pages
 for _, name in ipairs(tabNames) do
 	local page = Instance.new("Frame")
 	page.Size = UDim2.new(1, -20, 1, -110)
@@ -79,6 +85,7 @@ for _, name in ipairs(tabNames) do
 	tabContents[name] = page
 end
 
+-- Show tab function
 local function showTab(name)
 	for n, f in pairs(tabContents) do
 		f.Visible = (n == name)
@@ -86,9 +93,12 @@ local function showTab(name)
 end
 
 for name, btn in pairs(tabButtons) do
-	btn.MouseButton1Click:Connect(function() showTab(name) end)
+	btn.MouseButton1Click:Connect(function()
+		showTab(name)
+	end)
 end
 
+-- Create toggle buttons
 local function createToggle(name, tab, callback)
 	local btn = Instance.new("TextButton")
 	btn.Size = UDim2.new(1, 0, 0, buttonHeight)
@@ -109,27 +119,41 @@ local function createToggle(name, tab, callback)
 	end)
 end
 
--- Aimbot logic
-local aimbotEnabled = false
-local autoShoot = false
+-- Aimbot Logic
+local function faceHoop(hoopPos)
+	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
 
+	local newCFrame = CFrame.new(hrp.Position, Vector3.new(hoopPos.X, hrp.Position.Y, hoopPos.Z))
+	hrp.CFrame = newCFrame
+end
+
+-- Add toggles to each tab (hook these up later)
 createToggle("Aimbot Enabled", "Aimbot", function(state)
-	aimbotEnabled = state
+	if state then
+		print("[Aimbot] Activated")
+		-- Replace this with actual hoop detection logic:
+		local mockHoopPosition = Vector3.new(0, 10, 0)
+		faceHoop(mockHoopPosition)
+	else
+		print("[Aimbot] Deactivated")
+	end
 end)
 
 createToggle("Auto Shoot", "Aimbot", function(state)
-	autoShoot = state
+	print("[Auto Shoot] Toggled:", state)
 end)
 
 createToggle("Highlight Ball", "Visuals", function(state)
-	-- Future visual ESP
+	print("[Visuals] Highlight:", state)
 end)
 
 createToggle("Auto Green Release", "Misc", function(state)
-	-- Future: tune shot to green
+	print("[Misc] Auto Green:", state)
 end)
 
 createToggle("Theme Change (Coming Soon)", "Settings", function(state)
+	print("[Settings] Theme toggle:", state)
 end)
 
 -- Credits
@@ -143,44 +167,15 @@ credit.Font = Enum.Font.Gotham
 credit.TextSize = 14
 credit.Parent = mainFrame
 
+-- Show default tab
 showTab("Aimbot")
 
--- Keybind to toggle GUI
+-- GUI toggle keybind
 local guiVisible = true
 UIS.InputBegan:Connect(function(input, gpe)
-	if not gpe and input.KeyCode == Enum.KeyCode.RightShift then
+	if gpe then return end
+	if input.KeyCode == Enum.KeyCode.RightShift then
 		guiVisible = not guiVisible
 		mainFrame.Visible = guiVisible
-	end
-end)
-
--- Auto Aimbot + Shooting loop
-RS.RenderStepped:Connect(function()
-	if not aimbotEnabled then return end
-	local char = player.Character
-	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-
-	local hrp = char.HumanoidRootPart
-	local closestHoop, shortest = nil, math.huge
-
-	for _, obj in ipairs(workspace:GetDescendants()) do
-		if obj:IsA("BasePart") and obj.Name == "Goal" then
-			local dist = (obj.Position - hrp.Position).Magnitude
-			if dist < shortest then
-				shortest = dist
-				closestHoop = obj
-			end
-		end
-	end
-
-	if closestHoop then
-		hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(closestHoop.Position.X, hrp.Position.Y, closestHoop.Position.Z))
-
-		if autoShoot then
-			local shootButton = player.PlayerGui:FindFirstChild("MainGUI") and player.PlayerGui.MainGUI:FindFirstChild("ShootButton")
-			if shootButton then
-				mouse1click()
-			end
-		end
 	end
 end)
