@@ -126,7 +126,45 @@ createToggle("Aimbot Enabled", "Aimbot", function(state)
 end)
 
 createToggle("ESP Ball", "Visuals", function(state)
-    print("ESP Enabled")
+	if espConnection then
+		espConnection:Disconnect()
+		espConnection = nil
+	end
+	if workspace:FindFirstChild("BallESP") then
+		workspace.BallESP:Destroy()
+	end
+
+	if state then
+		local billboard = Instance.new("BillboardGui")
+		billboard.Name = "BallESP"
+		billboard.Size = UDim2.new(0, 100, 0, 30)
+		billboard.AlwaysOnTop = true
+		billboard.StudsOffset = Vector3.new(0, 2, 0)
+
+		local label = Instance.new("TextLabel", billboard)
+		label.Size = UDim2.new(1, 0, 1, 0)
+		label.BackgroundTransparency = 1
+		label.Text = "🏀 BALL"
+		label.TextColor3 = Color3.fromRGB(255, 200, 0)
+		label.TextStrokeTransparency = 0
+		label.Font = Enum.Font.GothamBlack
+		label.TextScaled = true
+
+		local function updateESP()
+			local ball = workspace:FindFirstChild("Basketball")
+			if ball and ball:IsA("BasePart") then
+				if not billboard.Parent then
+					billboard.Parent = ball
+				end
+			else
+				if billboard and billboard.Parent then
+					billboard.Parent = nil
+				end
+			end
+		end
+
+		espConnection = game:GetService("RunService").RenderStepped:Connect(updateESP)
+	end
 end)
 
 createToggle("Auto Green Release", "Misc", function(state)
