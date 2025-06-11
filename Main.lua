@@ -1,6 +1,7 @@
 -- ✅ Make sure the GUI works in Studio & Exploit environments
 if not game:IsLoaded() then game.Loaded:Wait() end
 
+local UIS = game:GetService("UserInputService")
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HoopzScriptGUI"
 
@@ -24,14 +25,16 @@ local spacing = 10
 
 -- ✅ UI main frame
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 300, 0, 350)
-mainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainFrame.Size = UDim2.new(0, 320, 0, 360)
+mainFrame.Position = UDim2.new(0.3, 0, 0.2, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
 mainFrame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner", mainFrame)
-UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.CornerRadius = UDim.new(0, 10)
 
 -- ✅ Tabs & layout
 local tabNames = {"Aimbot", "Visuals", "Misc", "Settings"}
@@ -46,11 +49,13 @@ tabFrame.Parent = mainFrame
 for i, tabName in ipairs(tabNames) do
     local tabBtn = Instance.new("TextButton")
     tabBtn.Size = UDim2.new(0, 70, 1, 0)
-    tabBtn.Position = UDim2.new(0, (i - 1) * 75, 0, 0)
+    tabBtn.Position = UDim2.new(0, (i - 1) * 75 + 10, 0, 0)
     tabBtn.Text = tabName
     tabBtn.TextColor3 = Color3.new(1, 1, 1)
     tabBtn.BackgroundColor3 = themeColor
     tabBtn.BorderSizePixel = 0
+    tabBtn.Font = Enum.Font.GothamBold
+    tabBtn.TextSize = 14
     tabBtn.Parent = tabFrame
 
     local corner = Instance.new("UICorner", tabBtn)
@@ -63,7 +68,7 @@ end
 local tabContents = {}
 for _, name in ipairs(tabNames) do
     local content = Instance.new("Frame")
-    content.Size = UDim2.new(1, -20, 1, -60)
+    content.Size = UDim2.new(1, -20, 1, -70)
     content.Position = UDim2.new(0, 10, 0, 50)
     content.BackgroundTransparency = 1
     content.Visible = false
@@ -98,6 +103,8 @@ local function createToggleButton(name, tab, callback)
     btn.TextColor3 = Color3.new(1, 1, 1)
     btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     btn.BorderSizePixel = 0
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
     btn.Parent = tabContents[tab]
 
     local corner = Instance.new("UICorner", btn)
@@ -150,3 +157,13 @@ credit.Parent = mainFrame
 
 -- ✅ Show Aimbot tab by default
 showTab("Aimbot")
+
+-- ✅ Keybind to toggle GUI
+local guiVisible = true
+UIS.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        guiVisible = not guiVisible
+        mainFrame.Visible = guiVisible
+    end
+end)
