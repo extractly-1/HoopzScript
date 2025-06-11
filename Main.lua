@@ -1,4 +1,4 @@
--- Hoopz GUI with Aimbot, Auto Shoot, ESP, Keybind Remap, and Mobile Compatibility
+
 
 if not game:IsLoaded() then game.Loaded:Wait() end
 
@@ -6,8 +6,8 @@ local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("RunService")
 local LP = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
--- Main GUI Setup
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HoopzScriptGUI"
 ScreenGui.ResetOnSpawn = false
@@ -117,29 +117,24 @@ local function createToggle(name, tab, callback)
     toggles[name] = function() return toggled end
 end
 
--- Toggles
 createToggle("Aimbot Enabled", "Aimbot", function(state)
-    -- aimbot logic runs with RunService
-end)
-
-createToggle("Auto Shoot", "Aimbot", function(state)
-    -- auto shoot enabled
+    if state then
+        StartLocking()
+    else
+        StopLocking()
+    end
 end)
 
 createToggle("ESP Ball", "Visuals", function(state)
-    if state then
-        print("ESP Enabled")
-    end
+    print("ESP Enabled")
 end)
 
 createToggle("Auto Green Release", "Misc", function(state)
     print("Green release toggled")
 end)
 
-createToggle("Theme Changer (soon)", "Settings", function(state)
-end)
+createToggle("Theme Changer (soon)", "Settings", function(state) end)
 
--- Credits
 local credit = Instance.new("TextLabel")
 credit.Size = UDim2.new(1, 0, 0, 24)
 credit.Position = UDim2.new(0, 0, 1, -26)
@@ -150,7 +145,6 @@ credit.Font = Enum.Font.Gotham
 credit.TextSize = 14
 credit.Parent = mainFrame
 
--- GUI Toggle Keybind
 local guiVisible = true
 UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
@@ -160,32 +154,64 @@ UIS.InputBegan:Connect(function(input, gpe)
     end
 end)
 
--- Aimbot + Auto Shoot Core Logic
-RS.RenderStepped:Connect(function()
-    if not toggles["Aimbot Enabled"] or not toggles["Aimbot Enabled"]() then return end
+local isMobile = UIS.TouchEnabled
+local Player = LP
+local connection
+local isLocking = false
 
-    local ball = workspace:FindFirstChild("Basketball")
-    if ball and ball:IsDescendantOf(workspace) and (ball.Position - LP.Character.HumanoidRootPart.Position).Magnitude < 100 then
-        local hoop = workspace:FindFirstChild("Hoop")
-        if hoop and hoop:FindFirstChild("Goal") then
-            local goalPos = hoop.Goal.Position
-            local char = LP.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                local hrp = char.HumanoidRootPart
-                local dir = (goalPos - hrp.Position).Unit
-                hrp.CFrame = CFrame.lookAt(hrp.Position, goalPos)
+local function PlayerHasBall()
+    local char = Player.Character or Player.CharacterAdded:Wait()
+    return char:FindFirstChild("Basketball") ~= nil
+end
 
-                if toggles["Auto Shoot"] and toggles["Auto Shoot"]() then
-                    local power = 65 -- approximate best value
-                    local args = {
-                        [1] = Vector3.new(goalPos.X, goalPos.Y, goalPos.Z),
-                        [2] = power,
-                        [3] = true
-                    }
-                    game:GetService("ReplicatedStorage").ShootEvent:FireServer(unpack(args))
+local function GetClosestGoal()
+    local closest, dist = nil, math.huge
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj.Name == "Swish" and obj.Parent:FindFirstChildOfClass("TouchTransmitter") then
+            local torso = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+            if torso then
+                local d = (torso.Position - obj.Position).Magnitude
+                if d < dist then
+                    dist = d
+                    closest = obj
                 end
             end
         end
+    end
+    return closest and closest.Parent or nil
+end
+
+function StartLocking()
+    if isLocking then return end
+    isLocking = true
+    connection = RS.RenderStepped:Connect(function()
+        local closestGoal = GetClosestGoal()
+        if closestGoal then
+            local head = Player.Character and Player.Character:FindFirstChild("Head")
+            if head then
+                local target = closestGoal.Position + Vector3.new(0, 40, 0)
+                Camera.CFrame = CFrame.new(Camera.CFrame.Position, target)
+            end
+        end
+    end)
+end
+
+function StopLocking()
+    if not isLocking then return end
+    isLocking = false
+    if connection then connection:Disconnect() connection = nil end
+end
+
+local char = Player.Character or Player.CharacterAdded:Wait()
+local humanoid = char:WaitForChild("Humanoid")
+humanoid.Jumping:Connect(function()
+    if toggles["Aimbot Enabled"] and toggles["Aimbot Enabled"]() and PlayerHasBall() then
+        StartLocking()
+    end
+end)
+humanoid.StateChanged:Connect(function(_, state)
+    if state == Enum.HumanoidStateType.Landed then
+        StopLocking()
     end
 end)
 
