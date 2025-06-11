@@ -1,9 +1,11 @@
--- Ensure the game is loaded
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
-local player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HoopzScriptGUI"
 ScreenGui.ResetOnSpawn = false
@@ -98,6 +100,12 @@ for name, btn in pairs(tabButtons) do
 	end)
 end
 
+-- Toggle logic
+local toggles = {
+    Aimbot = false,
+    AutoShoot = false
+}
+
 -- Create toggle buttons
 local function createToggle(name, tab, callback)
 	local btn = Instance.new("TextButton")
@@ -119,29 +127,13 @@ local function createToggle(name, tab, callback)
 	end)
 end
 
--- Aimbot Logic
-local function faceHoop(hoopPos)
-	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-	if not hrp then return end
-
-	local newCFrame = CFrame.new(hrp.Position, Vector3.new(hoopPos.X, hrp.Position.Y, hoopPos.Z))
-	hrp.CFrame = newCFrame
-end
-
 -- Add toggles to each tab (hook these up later)
 createToggle("Aimbot Enabled", "Aimbot", function(state)
-	if state then
-		print("[Aimbot] Activated")
-		-- Replace this with actual hoop detection logic:
-		local mockHoopPosition = Vector3.new(0, 10, 0)
-		faceHoop(mockHoopPosition)
-	else
-		print("[Aimbot] Deactivated")
-	end
+	toggles.Aimbot = state
 end)
 
 createToggle("Auto Shoot", "Aimbot", function(state)
-	print("[Auto Shoot] Toggled:", state)
+	toggles.AutoShoot = state
 end)
 
 createToggle("Highlight Ball", "Visuals", function(state)
@@ -177,5 +169,19 @@ UIS.InputBegan:Connect(function(input, gpe)
 	if input.KeyCode == Enum.KeyCode.RightShift then
 		guiVisible = not guiVisible
 		mainFrame.Visible = guiVisible
+	end
+end)
+
+-- Hoopz auto shoot logic
+RunService.RenderStepped:Connect(function()
+	if toggles.Aimbot and toggles.AutoShoot then
+		local char = LocalPlayer.Character
+		if not char then return end
+		local ball = workspace:FindFirstChild("Basketball")
+		if not ball or (ball.Position - char.HumanoidRootPart.Position).Magnitude > 40 then return end
+		local shootEvent = ReplicatedStorage:FindFirstChild("Shoot")
+		if shootEvent then
+			shootEvent:FireServer({Power = 1, AimDirection = Vector3.new(0,1,0)})
+		end
 	end
 end)
