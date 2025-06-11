@@ -203,3 +203,51 @@ end
 
 -- Default tab
 showTab("Aimbot")
+
+-- Aimbot Toggle Button
+local aimbotEnabled = false
+
+local toggleAimbot = Instance.new("TextButton", pages["Aimbot"])
+toggleAimbot.Size = UDim2.new(0, 200, 0, 30)
+toggleAimbot.Position = UDim2.new(0, 10, 0, 40)
+toggleAimbot.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+toggleAimbot.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleAimbot.Font = Enum.Font.Gotham
+toggleAimbot.TextSize = 16
+toggleAimbot.Text = "Aimbot: OFF"
+
+toggleAimbot.MouseButton1Click:Connect(function()
+	aimbotEnabled = not aimbotEnabled
+	toggleAimbot.Text = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF")
+	toggleAimbot.BackgroundColor3 = aimbotEnabled and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(70, 70, 70)
+end)
+
+task.spawn(function()
+	while true do
+		if aimbotEnabled then
+			local player = game.Players.LocalPlayer
+			local char = player.Character
+			if char and char:FindFirstChild("HumanoidRootPart") then
+				local root = char.HumanoidRootPart
+				local closestHoop
+				local shortestDistance = math.huge
+
+				for _, obj in pairs(workspace:GetDescendants()) do
+					if obj:IsA("BasePart") and obj.Name:lower():find("hoop") then
+						local dist = (obj.Position - root.Position).Magnitude
+						if dist < shortestDistance then
+							shortestDistance = dist
+							closestHoop = obj
+						end
+					end
+				end
+
+				if closestHoop then
+					local look = (closestHoop.Position - root.Position).Unit
+					root.CFrame = CFrame.new(root.Position, root.Position + look)
+				end
+			end
+		end
+		task.wait(0.2)
+	end
+end)
