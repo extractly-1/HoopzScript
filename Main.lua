@@ -1,10 +1,11 @@
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 local UIS = game:GetService("UserInputService")
+local RS = game:GetService("RunService")
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+local Camera = workspace.CurrentCamera
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HoopzScriptGUI"
@@ -87,7 +88,6 @@ for _, name in ipairs(tabNames) do
 	tabContents[name] = page
 end
 
--- Show tab function
 local function showTab(name)
 	for n, f in pairs(tabContents) do
 		f.Visible = (n == name)
@@ -100,13 +100,13 @@ for name, btn in pairs(tabButtons) do
 	end)
 end
 
--- Toggle logic
-local toggles = {
-    Aimbot = false,
-    AutoShoot = false
-}
+-- Aimbot + Auto Shoot Vars
+local aimbotEnabled = false
+local autoShoot = false
+local aimPart = "Head"
+local shootCooldown = 0
 
--- Create toggle buttons
+-- Create Toggle
 local function createToggle(name, tab, callback)
 	local btn = Instance.new("TextButton")
 	btn.Size = UDim2.new(1, 0, 0, buttonHeight)
@@ -127,25 +127,69 @@ local function createToggle(name, tab, callback)
 	end)
 end
 
--- Add toggles to each tab (hook these up later)
+-- Aimbot Logic
+local function getClosestHoop()
+	local closest, dist = nil, math.huge
+	for _, v in ipairs(workspace:GetDescendants()) do
+		if v:IsA("Part") and v.Name == "Goal" then
+			local mag = (Camera.CFrame.Position - v.Position).Magnitude
+			if mag < dist then
+				dist = mag
+				closest = v
+			end
+		end
+	end
+	return closest
+end
+
+RS.RenderStepped:Connect(function()
+	if aimbotEnabled then
+		local hoop = getClosestHoop()
+		if hoop and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+			local hrp = LocalPlayer.Character.HumanoidRootPart
+			local dir = (hoop.Position - hrp.Position).Unit
+			local lookCFrame = CFrame.lookAt(hrp.Position, hoop.Position)
+			hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(hoop.Position.X, hrp.Position.Y, hoop.Position.Z))
+		end
+	end
+end)
+
+-- Auto Shoot Logic
+local function fireBall()
+	local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildWhichIsA("Tool")
+	if tool and tool:FindFirstChild("Shoot") then
+		pcall(function()
+			tool.Shoot:FireServer({Power = 100, Release = 1})
+		end)
+	end
+end
+
+RS.Heartbeat:Connect(function()
+	if autoShoot and tick() > shootCooldown then
+		shootCooldown = tick() + 0.3
+		fireBall()
+	end
+end)
+
+-- Toggles
 createToggle("Aimbot Enabled", "Aimbot", function(state)
-	toggles.Aimbot = state
+	aimbotEnabled = state
 end)
 
 createToggle("Auto Shoot", "Aimbot", function(state)
-	toggles.AutoShoot = state
+	autoShoot = state
 end)
 
 createToggle("Highlight Ball", "Visuals", function(state)
-	print("[Visuals] Highlight:", state)
+	-- implement later
 end)
 
 createToggle("Auto Green Release", "Misc", function(state)
-	print("[Misc] Auto Green:", state)
+	-- implement later
 end)
 
 createToggle("Theme Change (Coming Soon)", "Settings", function(state)
-	print("[Settings] Theme toggle:", state)
+	-- implement later
 end)
 
 -- Credits
@@ -162,26 +206,12 @@ credit.Parent = mainFrame
 -- Show default tab
 showTab("Aimbot")
 
--- GUI toggle keybind
+-- Keybind to toggle UI
 local guiVisible = true
 UIS.InputBegan:Connect(function(input, gpe)
 	if gpe then return end
 	if input.KeyCode == Enum.KeyCode.RightShift then
 		guiVisible = not guiVisible
 		mainFrame.Visible = guiVisible
-	end
-end)
-
--- Hoopz auto shoot logic
-RunService.RenderStepped:Connect(function()
-	if toggles.Aimbot and toggles.AutoShoot then
-		local char = LocalPlayer.Character
-		if not char then return end
-		local ball = workspace:FindFirstChild("Basketball")
-		if not ball or (ball.Position - char.HumanoidRootPart.Position).Magnitude > 40 then return end
-		local shootEvent = ReplicatedStorage:FindFirstChild("Shoot")
-		if shootEvent then
-			shootEvent:FireServer({Power = 1, AimDirection = Vector3.new(0,1,0)})
-		end
 	end
 end)
